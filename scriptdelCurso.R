@@ -134,8 +134,8 @@ tablaResumenDesempleo <-  bind_rows(varon18a30, mujer25a40)
 tablaConfianzaDesempleo <- tablaResumenDesempleo %>% 
     select(genero, edad, DStasaDesempleo,tasaDesempleo) %>% 
     mutate(
-        LiTasaActividad = round(tasaDesempleo - DStasaDesempleo *1.64,2),
-        LsTasaActividad = round(tasaDesempleo + DStasaDesempleo *1.64,2)
+        LiTasaDesempleo = round(tasaDesempleo - DStasaDesempleo *1.64,2),
+        LsTasaDesempleo = round(tasaDesempleo + DStasaDesempleo *1.64,2)
     )
 
 #guardo las tablas como excel
