@@ -1,5 +1,5 @@
 ---
-title: "TP2"
+title: "TP2 - Seminario Philipp - Sociología UBA"
 author: "Juan Gabriel Juara"
 date: "12/10/2020"
 output:
@@ -16,8 +16,34 @@ knitr::opts_chunk$set(
   echo = TRUE)
 ```
 
+## Consignas
+
+Ejercicio Práctico N° 2
+
+
+A partir de la última base de microdatos disponible de la Encuesta
+Permanente de Hogares (EPH) calcular para Total 31 Aglomerados
+Urbanos las siguientes tasas desagregadas del mercado laboral:
+1. Tasa de Actividad para:
+a) Hombres entre 25 y 65 años.
+b) Mujeres entre 25 y 65 años.
+c) Hombres entre 16 y 24 años.
+d) Hombres/Mujeres de más de 65 años.
+
+2. Tasa de Desempleo para:
+a) Hombres entre 18 y 30 años.
+b) Mujeres entre 25 y 40 años.
+
+3. Intervalos de Confianza
+De los anteriores resultados seleccione 3 tasas/indicadores y construya los
+intervalos de confianza (limites inferior y superior) de las respectivas estimaciones.
+
 ## Código del ejercicio
 
+Ej.:
+$CV(TasaDeDesempleo) = \sqrt{CV(PEA)^2+CV(desempleados)^2}$
+$DS(TasaDeDesempleo) = TasaDeDesempleo * CV(TasaDeDesempleo)/100$
+$LimInf(TasaDeDesempleo) = TasaDeDesempleo-DS(TasaDeDesempleo)*1.64$
 Hacer click en el botón para ver el código con comentarios
 ```{r }
 library(eph)
