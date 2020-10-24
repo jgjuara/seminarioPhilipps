@@ -144,3 +144,27 @@ write_excel_csv(tablaResumenActividad, "tablaActividad1.xls")
 write_excel_csv(tablaConfianzaActividad, "tablaActividad2.xls")
 write_excel_csv(tablaResumenDesempleo, "tablaDesempleo1.xls")
 write_excel_csv(tablaConfianzaDesempleo, "tablaDesempleo2.xls")
+
+
+a <- eph202001 %>% 
+    #filtro por edad y selecciono solo grupo etario deseado
+    #divido por genero para calcular por separado cada grupo
+    #summarise envuelve los calculos deseados
+    summarise(
+              desempleo = sum(PONDERA[ESTADO == 2]),
+              PEA = sum(PONDERA[ESTADO == 1 | ESTADO == 2]),
+              tasaDesempleo = round(desempleo/PEA*100,1),
+              CVppdesempleo = closest(desempleo,
+                                      error201403TotalAglom$estimacion,
+                                      error201403TotalAglom$CVpp),
+              CVppPEA = closest(PEA,
+                                error201403TotalAglom$estimacion,
+                                error201403TotalAglom$CVpp),
+              CVtasaDesempleo = round(sqrt((CVppPEA)^2+(CVppdesempleo)^2),1),
+              DStasaDesempleo = round(tasaDesempleo*CVtasaDesempleo/100,1)) 
+
+b <- a %>% 
+    mutate(
+        LiTasaDesempleo = round(tasaDesempleo - DStasaDesempleo *1.64,1),
+        LsTasaDesempleo = round(tasaDesempleo + DStasaDesempleo *1.64,1)
+    )
