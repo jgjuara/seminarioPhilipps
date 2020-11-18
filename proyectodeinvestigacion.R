@@ -2,52 +2,79 @@
 
 library(eph)
 library(tidyverse)
-library(data.table)
+library(DescTools)
 
-eph_2018_3 <- readRDS("~/Documentos/rProyects/EPHfiles/eph_2018_3.RDS")
+bases <- get_microdata(year = 2017, trimester = c(1,3), type = "individual",
+          vars = c("ANO4", "TRIMESTRE", "CODUSU", "ESTADO", "CAT_OCUP","PONDERA","CH04","CH06","NIVEL_ED","PP04B_COD","P21","PONDIIO"))
 
-eph_2018_3 <- eph_2018_3$microdata[[1]]
+bases <- bases$microdata[[1]] %>% 
+    rbind(bases$microdata[[2]])
 
-eph_2018_3 <- eph_2018_3 %>% 
-    organize_caes()
-
-eph_2018_3 <- eph_2018_3 %>% 
+bases <- bases %>% 
     organize_labels()
 
-eph_2018_3 <- eph_2018_3 %>% 
+# variables categoricas como factores
+bases <-  bases %>% 
     mutate(CH04 = as_factor(CH04),
-           NIVEL_ED = as_factor(NIVEL_ED))
+           CAT_OCUP =as_factor(CAT_OCUP),
+           NIVEL_ED = as_factor(NIVEL_ED),
+           P21 = as.numeric(P21),
+           ESTADO = as_factor(ESTADO))
 
-# subtabla x region, estado, categoria de ocupacion
+# Tablas descriptivas
 
-dfeph_2018_3_gba <- eph_2018_3 %>% 
-    filter(REGION == 01, ESTADO == 1 , CAT_OCUP == 3)
+Freq(bases$ESTADO)
+## 17 mil observaciones aprox entran en la poblacion deseada
+Freq(eph_2018_3$ESTADO)
+Freq(eph_2018_3$CAT_OCUP)
+xtabs( ~ ESTADO + CAT_OCUP, eph_2018_3)
 
-#seleccion variables de interés
+## usando la expansion de casos de INDEC representa unas 8.7 millones de personas con un CV de 1.5%
+eph_2018_3 %>% 
+    filter( ESTADO == "Ocupado" & CAT_OCUP == "Obrero o empleado") %>% 
+    summarise(sum(PONDERA))
 
-dfeph_2018_3_gba <- dfeph_2018_3_gba %>% 
+#seleccion de poblacion de estudio ocupados y trabajadores en relacion de dependencia: edad, estado, cat_ocup
+eph_2018_3 <- eph_2018_3 %>% 
+    filter( ESTADO == "Ocupado" & CAT_OCUP == "Obrero o empleado")
+
+#seleccionando variables de interés
+eph_2018_3 <- eph_2018_3 %>% 
     select(ANO4, PONDERA,CH04,CH06,NIVEL_ED,PP04B_COD,P21,PONDIIO)
 
-
-dfeph_2018_3_gba <- dfeph_2018_3_gba %>% 
+#agregando variables desagregadas de actividad por CAES
+eph_2018_3 <- eph_2018_3 %>% 
     organize_caes()
+eph_2018_3 <- eph_2018_3 %>% 
+    mutate(caes_seccion_label = as_factor(caes_seccion_label) )
+#analisis descriptivo parte 1: descripción de las variables de interes
 
-totalPONDERA <- sum(dfeph_2018_3_gba$PONDERA)
-totalPONDIIO <- sum(dfeph_2018_3_gba$PONDIIO)
+#frencuencias absolutas y relativas
+# categoricas
+Freq(eph_2018_3$CH04)
+Freq(eph_2018_3$NIVEL_ED)
+Freq(eph_2018_3$caes_seccion_label)
+wtd.table(eph_2018_3$caes_seccion_label, weights = eph_2018_3$PONDERA) %>% 
+    view()
 
-tabla1 <- dfeph_2018_3_gba %>% 
-    mutate(CH04 = as_factor(CH04), NIVEL_ED = as_factor(NIVEL_ED)) %>% 
-    group_by(CH04, NIVEL_ED) %>% 
-    summarise( n = sum(PONDERA))
+# numerica
+summary(eph_2018_3$P21)
+Desc(eph_2018_3$P21, plotit = T)
+PlotFdist(eph_2018_3$P21)
 
-tabla1 <- dfeph_2018_3_gba %>% 
-    mutate(CH04 = as_factor(CH04), NIVEL_ED = as_factor(NIVEL_ED)) %>% 
-    group_by(CH04, NIVEL_ED) %>% 
-    summarise(n = n())
+#tablas cruzadas
+xtabs( ~ CH04 + NIVEL_ED, eph_2018_3)
+xtabs( ~ CH04 + caes_seccion_label, eph_2018_3)
+xtabs( ~ NIVEL_ED + caes_seccion_label, eph_2018_3)
+summary
 
-tabla2 <- dfeph_2018_3_gba %>% 
-    group_by(caes_seccion_label) %>% 
-    summarise(n = n())
+view(tabla1)
+str(tabla1)
+summary(tabla1)
+
+questionr::tabs()
+
+
 ##
 linealed <- lm(P21 ~ NIVEL_ED, dfeph_2018_3_gba)
 summary(linealed)
