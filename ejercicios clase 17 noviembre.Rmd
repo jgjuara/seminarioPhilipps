@@ -1,0 +1,75 @@
+---
+title: "Ejercicios Clase 17/11 Seminario Philipp"
+author: "Juan Gabriel Juara"
+date: "18/11/2020"
+output: 
+    html_document:
+        code_folding: hide
+---
+
+```{r setup}
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  out.width = "90%")
+
+library(eph)
+library(tidyverse)
+```
+
+## Carga de la base de datos EPH
+La base de datos ya había sido descargada previamente, si no fue descargada antes se puede usar la función get_microdata() del paquete "eph"
+
+
+```{r}
+
+# carga de la base de datos
+eph_2019_1 <- readRDS("~/Documentos/rProyects/seminarioPhilipps/eph_2019_1.RDS")
+
+# la base de datos se carga anidada en una lista que incluye metadatos, para trabajar mas comodamente me quedo solo con la base.
+eph_2019_1 <- eph_2019_1[[5]] %>% 
+    as.data.frame()
+
+#etiquetado de variables con la funcion organize_labels() del paquete eph
+eph_2019_1 <- eph_2019_1 %>% 
+    organize_labels()
+
+```
+
+## ¿Qué hogares tienen personas menores de 14 años?
+```{r}
+hogaresconmenores <- eph_2019_1 %>%
+    # seleccion de las variables de interes
+    select(CODUSU, NRO_HOGAR, COMPONENTE, CH06) %>% 
+    # agrupo por id de vivienda y nro de hogar
+    group_by(CODUSU, NRO_HOGAR) %>% 
+    # genero variable que indica si en el hogar hay menores, any() devuelve TRUE si alguno de sus argumentos es TRUE
+    summarise(menores = any(CH06 < 14)) %>% 
+    ungroup()
+
+hogaresconmenores %>% 
+    DT::datatable()
+```
+
+## ¿Cómo se componen los hogares según la cantidad de cada tipo de integrantes?
+
+Cantidad de personas por categoría de integrante del hogar
+```{r}
+# la variable CH03 tengo que pasarla a númerica para poder transformarla con pivot wider
+eph_2019_1$CH03 <- as.numeric(eph_2019_1$CH03)
+
+tipodehogar  <- eph_2019_1 %>%
+    #seleccion de variables de interes
+    select(CODUSU, NRO_HOGAR, COMPONENTE, CH03) %>% 
+    # creo una variable que combina el codusu y el nro de hogar para identificar a cada hogar
+    mutate(id_hogar = paste0(CODUSU, NRO_HOGAR)) %>% 
+    # esta funcion crea nuevas variables a partir de los valores en variables anteriores
+    # es decir, reforma la base de datos para "apaisarla"
+    pivot_wider(values_from = CH03, values_fn = list(CH03 = length),data = .,id_cols = id_hogar,names_from = CH03)
+
+#ahora la tabla dice para cada hogar cuantos integrantes de cada tipo hay.
+tipodehogar %>% 
+    DT::datatable()
+    
+```
+
