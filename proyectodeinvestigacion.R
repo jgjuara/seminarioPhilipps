@@ -25,36 +25,76 @@ CBTregiones <- read_csv(url_CBTregiones)
 
 ####----BASES----
 #carga de bases
-eph_2017_1 <- readRDS("~/Documentos/rProyects/seminarioPhilipps/eph_2017_1.RDS")
-eph_2017_2 <- readRDS("~/Documentos/rProyects/seminarioPhilipps/eph_2017_2.RDS")
-eph_2017_3 <- readRDS("~/Documentos/rProyects/seminarioPhilipps/eph_2017_3.RDS")
-eph_2017_4 <- readRDS("~/Documentos/rProyects/seminarioPhilipps/eph_2017_4.RDS")
+eph2017[[1]] <- readRDS("~/Documentos/rProyects/seminarioPhilipps/eph_2017_1.RDS")
+eph2017[[2]] <- readRDS("~/Documentos/rProyects/seminarioPhilipps/eph_2017_2.RDS")
+eph2017[[3]] <- readRDS("~/Documentos/rProyects/seminarioPhilipps/eph_2017_3.RDS")
+eph2017[[4]] <- readRDS("~/Documentos/rProyects/seminarioPhilipps/eph_2017_4.RDS")
 #suma de bases
-eph2017 <- bind_rows(eph_2017_1[[5]],eph_2017_2[[5]], eph_2017_3[[5]], eph_2017_4[[5]])
-#saco las bases individuales
-rm(eph_2017_1,eph_2017_2, eph_2017_3, eph_2017_4)
+eph2017 <- bind_rows(eph2017[[1]][[5]],eph2017[[2]][[5]], eph2017[[3]][[5]], eph2017[[4]][[5]])
+
+# guardo la base unificada
+write_rds(eph2017, path = "eph2017completa.RDS", compress = "gz")
 #creo una variable "idhogar" que une el CODUSU y el NRO de hogar en una sola linea de caracteres
-eph2017 <- eph2017 %>% 
+eph2017completa <- eph2017completa %>% 
     mutate(idhogar = paste0(CODUSU, NRO_HOGAR))
 
-# obtengo la lista de hogares observados una sola vez en el año
-hogaresdeunaobservacion <- eph2017 %>% 
+# obtengo la lista de hogares observados una sola vez en el año 
+hogaresdeunaobservacion <- eph2017completa %>% 
+    select(idhogar, TRIMESTRE) %>% 
     #agrupo primero por idhogar y dps por trimestre
-    group_by(idhogar, TRIMESTRE) %>% 
-    # armo una tabla con cada idhogar por trimestre (sin duplicados)
-    summarise(observaciones = n_distinct(idhogar)) %>% 
-    ungroup %>% 
-    # agrupo esa tabla por idhogar ignorando trimestres
-    group_by(idhogar) %>% 
-    # cuento la cantidad de trimestres que apareció cada idhogar durante el año
-    summarise(obs = sum(observaciones)) %>% 
-    ungroup() %>% 
-    # me quedo solo con los idhogar que aparecieron en un solo trimestres
-    filter(obs == 1)
+    pivot_wider(names_from = TRIMESTRE, values_from = TRIMESTRE, values_fn = list(TRIMESTRE = is.vector))
 
-eph2017 <- eph2017 %>% 
-    # uso la lista de idhogar que solo aparecieron en un trimestre para filtrar la base
-    filter(idhogar %in% hogaresdeunaobservacion$idhogar)
+hogaresdeunaobservacion[2:5] <- !is.na(hogaresdeunaobservacion[2:5])
+
+hogaresdeunaobservacion <- hogaresdeunaobservacion %>% 
+    mutate( ntrims = hogaresdeunaobservacion$`1`+hogaresdeunaobservacion$`2`+hogaresdeunaobservacion$`3`+hogaresdeunaobservacion$`4`)
+    
+hogaresdeunaobservacion %>% 
+    write_csv(., path = "tablahogaresobservadosportrimestres.csv")
+
+tablahogaresobservadosportrimestres %>%
+    group_by(ntrims) %>% 
+    summarise(t1 = sum(`1`),
+              t2 = sum(`2`),
+              t3 = sum(`3`),
+              t4 = sum(`4`)) %>% 
+    t(.) %>% 
+    as.data.frame() %>% 
+    .[2:5,1:2] %>% 
+    mutate(porcentaje = 100*V1/(V1+V2)) %>% 
+    knitr::kable(., row.names = T ,digits = 2,
+                 col.names = c("Hogares entrevistados una vez",
+                                             "Hogares entrevistados dos veces",
+                                             "Porcentaje de Hogares entrevistados una vez sobre el total"))
+
+
+
+eph1 <- hogaresdeunaobservacion %>% 
+    filter(`1` == T & ntrims == 1) %>% 
+    sample_n(tbl = .,size = 2137,replace = F)
+
+eph2 <- hogaresdeunaobservacion %>% 
+    filter(`2` == T & ntrims == 1 ) %>% 
+    sample_n(tbl = .,size = 2137,replace = F)
+
+eph3 <- hogaresdeunaobservacion %>% 
+    filter(`3` == T & ntrims == 1) %>% 
+    sample_n(tbl = .,size = 2137,replace = F)
+
+eph4 <- hogaresdeunaobservacion %>% 
+    filter(`4` == T & ntrims == 1) %>% 
+    sample_n(tbl = .,size = 2137,replace = F)
+
+hogaresdeunaobservacion <- bind_rows(eph1,eph2,eph3,eph4)
+
+eph2017completa <- semi_join(eph2017completa, hogaresdeunaobservacion)
+    
+eph2017completa %>% 
+    group_by(TRIMESTRE) %>% 
+    summarise(individuos = n(),
+              hogares = n_distinct(idhogar))
+
+write_rds(eph2017completa, path = "eph2017.RDS", compress = "gz")
 
 eph2017 <- eph2017 %>% 
     organize_labels()
