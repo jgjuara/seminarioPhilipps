@@ -1,4 +1,5 @@
 # Proyecto de Investigación
+# seleccion por hogares
 
 library(eph)
 library(tidyverse)
